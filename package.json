@@ -1,11 +1,11 @@
 {
   "name": "cclip",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A simple CLI tool to copy text to clipboard",
   "license": "MIT",
   "author": "ru44",
   "main": "dist/main.js",
-  "module": "dist/main.mjs",
+  "module": "dist/main.js",
   "types": "dist/main.d.ts",
   "type": "module",
   "repository": {
@@ -55,6 +55,6 @@
     "typescript-eslint": "^8.15.0"
   },
   "bin": {
-    "cclip": "dist/main.mjs"
+    "cclip": "dist/main.js"
   }
 }
