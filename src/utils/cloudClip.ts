@@ -1,99 +1,99 @@
-import { resolve as _resolve } from "path"
-import { existsSync, readFileSync, writeFileSync } from "fs"
-import clipboardy from "clipboardy"
-import { GistApi } from "./gistApi"
+import { createGistApiConfig, getGist, createGist, editGist } from './gistApi'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { CloudClipConfig } from '../interfaces/interfaces'
+import clipboardy from 'clipboardy'
 
-export class CloudClip {
-  configFile: string
-  config: any
-  api: GistApi
-  constructor(configFile: string) {
-    this.configFile = _resolve(configFile)
-    this.config = this.readConfig()
-    this.api = new GistApi(this.config.token)
-  }
 
-  readConfig() {
-    if (!existsSync(this.configFile)) {
-      return {}
+const readConfig = (configFile: string): CloudClipConfig => {
+    if (!existsSync(configFile)) {
+        return {}
     }
-    return JSON.parse(readFileSync(this.configFile, "utf-8"))
-  }
+    return JSON.parse(readFileSync(configFile, 'utf-8'))
+}
 
-  saveConfig(config: any) {
-    writeFileSync(this.configFile, JSON.stringify(config, null, 2))
-  }
+const saveConfig = (configFile: string, config: CloudClipConfig) => {
+    writeFileSync(configFile, JSON.stringify(config, null, 2))
+}
 
-  setToken(token: any) {
-    this.config.token = token
-    this.api = new GistApi(token)
-    this.saveConfig(this.config)
-  }
+const setToken = (configFile: string, config: CloudClipConfig, token: string) => {
+    config.token = token
+    saveConfig(configFile, config)
+}
 
-  setGistId(gistId: null) {
-    this.config.gistId = gistId
-    this.saveConfig(this.config)
-  }
+const setGistId = (configFile: string, config: CloudClipConfig, gistId: string) => {
+    config.gistId = gistId
+    saveConfig(configFile, config)
+}
 
-  async init(token: any, gistId = null) {
-    this.setToken(token)
+export const init = async (configFile: string, token: string, gistId: string | null = null) => {
+    const config = readConfig(configFile)
+    setToken(configFile, config, token)
+    const apiConfig = createGistApiConfig(token)
+
     if (!gistId) {
-      const placeholder = {
-        "<clipboard>": { content: "Your clipboard in the cloud." },
-      }
-      const gist = await this.api.createGist("<Clipboard>", placeholder)
-      gistId = gist.id
-      console.log(`New Gist created with ID: ${gistId}`)
+        const placeholder = {
+            '<clipboard>': { content: 'Your clipboard in the cloud.' }
+        }
+        const gist = await createGist(apiConfig, '<Clipboard>', placeholder)
+        gistId = gist.id
+        console.log(`New Gist created with ID: ${gistId}`)
     }
-    this.setGistId(gistId)
-    console.log(`Configuration saved in: ${this.configFile}`)
-  }
+    setGistId(configFile, config, gistId!)
+    console.log(`Configuration saved in: ${configFile}`)
+}
 
-  async list() {
-    if (!this.config.gistId) {
-      throw new Error("Gist ID is not configured. Use `--init` first.")
+export const list = async (configFile: string) => {
+    const config = readConfig(configFile)
+    if (!config.gistId) {
+        throw new Error('Gist ID is not configured. Use `--init` first.')
     }
-    const gist = await this.api.getGist(this.config.gistId)
+    const apiConfig = createGistApiConfig(config.token!)
+    const gist = await getGist(apiConfig, config.gistId)
     console.log(`Gist ID: ${gist.id}`)
     console.log(`Description: ${gist.description}`)
     Object.entries(gist.files).forEach(([name, details]) => {
-      const fileDetails = details as { size: number }
-      console.log(`- ${name} (${fileDetails.size} bytes)`)
+        const fileDetails = details as { size: number }
+        console.log(`- ${name} (${fileDetails.size} bytes)`)
     })
-  }
+}
 
-  async copy(name: any, content: unknown) {
-    if (!this.config.gistId) {
-      throw new Error("Gist ID is not configured. Use `--init` first.")
+export const copy = async (configFile: string, name: string, content: string) => {
+    const config = readConfig(configFile)
+    if (!config.gistId) {
+        throw new Error('Gist ID is not configured. Use `--init` first.')
     }
+    const apiConfig = createGistApiConfig(config.token!)
     const files = { [name]: { content } }
-    await this.api.editGist(this.config.gistId, "<Clipboard>", files)
-    console.log("Content copied to cloud clipboard.")
-  }
+    await editGist(apiConfig, config.gistId, '<Clipboard>', files)
+    console.log('Content copied to cloud clipboard.')
+}
 
-  async paste(name: string | number) {
-    if (!this.config.gistId) {
-      throw new Error("Gist ID is not configured. Use `--init` first.")
+export const paste = async (configFile: string, name: string) => {
+    const config = readConfig(configFile)
+    if (!config.gistId) {
+        throw new Error('Gist ID is not configured. Use `--init` first.')
     }
-    const gist = await this.api.getGist(this.config.gistId)
+    const apiConfig = createGistApiConfig(config.token!)
+    const gist = await getGist(apiConfig, config.gistId)
     const file = gist.files[name]
     if (!file) {
-      throw new Error(`File "${name}" not found in the Gist.`)
+        throw new Error(`File "${name}" not found in the Gist.`)
     }
     clipboardy.writeSync(file.content)
-    console.log("Content pasted to clipboard.")
-  }
+    console.log('Content pasted to clipboard.')
+}
 
-  async clear() {
-    if (!this.config.gistId) {
-      throw new Error("Gist ID is not configured. Use `--init` first.")
+export const clear = async (configFile: string) => {
+    const config = readConfig(configFile)
+    if (!config.gistId) {
+        throw new Error('Gist ID is not configured. Use `--init` first.')
     }
-    const gist = await this.api.getGist(this.config.gistId)
+    const apiConfig = createGistApiConfig(config.token!)
+    const gist = await getGist(apiConfig, config.gistId)
     const files = Object.keys(gist.files).reduce((acc: { [key: string]: any }, name) => {
-      acc[name] = null
-      return acc
+        acc[name] = null
+        return acc
     }, {})
-    await this.api.editGist(this.config.gistId, "<Clipboard>", files)
-    console.log("Cloud clipboard cleared.")
-  }
+    await editGist(apiConfig, config.gistId, '<Clipboard>', files)
+    console.log('Cloud clipboard cleared.')
 }

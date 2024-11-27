@@ -1,59 +1,52 @@
-import axios from "axios"
+import { GistError, GistApiConfig, GistFile } from '../interfaces/interfaces'
+import axios from 'axios'
 
-export class GistError extends Error {
-  code: any
-  constructor(code: any, message: any) {
-    super(message)
-    this.code = code
-  }
-}
-
-export class GistApi {
-  token: any
-  baseUrl: string
-  headers: { Authorization: string; "Content-Type": string }
-  constructor(token: any) {
-    this.token = token
-    this.baseUrl = "https://api.github.com"
-    this.headers = {
-      Authorization: `token ${token}`,
-      "Content-Type": "application/json",
+export const createGistApiConfig = (token: string): GistApiConfig => ({
+    token,
+    baseUrl: 'https://api.github.com',
+    headers: {
+        Authorization: `token ${token}`,
+        'Content-Type': 'application/json'
     }
-  }
+})
 
-  async request(method: any, endpoint: any, params = {}, data: any = null) {
+const request = async (
+    config: GistApiConfig,
+    method: string,
+    endpoint: string,
+    params = {},
+    data: any = null
+): Promise<any> => {
     try {
-      const url = `${this.baseUrl}${endpoint}`
-      const options = { method, headers: this.headers, params, data }
-      const response = await axios(url, options)
-      return response.data
+        const url = `${config.baseUrl}${endpoint}`
+        const options = { method, headers: config.headers, params, data }
+        const response = await axios(url, options)
+        return response.data
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        throw new GistError(error.response.status, error.response.data.message)
-      }
-      throw new GistError(-1, (error as Error).message)
+        if (axios.isAxiosError(error) && error.response) {
+            throw { code: error.response.status, message: error.response.data.message } as GistError
+        }
+        throw { code: -1, message: (error as Error).message } as GistError
     }
-  }
-
-  listGists() {
-    return this.request("GET", "/gists")
-  }
-
-  getGist(id: any) {
-    return this.request("GET", `/gists/${id}`)
-  }
-
-  createGist(description: string, files: { "<clipboard>": { content: string } }, isPublic = false) {
-    const data = { description, public: isPublic, files }
-    return this.request("POST", "/gists", {}, data)
-  }
-
-  editGist(id: any, description: string, files: { [x: number]: { content: any } }) {
-    const data = { description, files }
-    return this.request("PATCH", `/gists/${id}`, {}, data)
-  }
-
-  deleteGist(id: any) {
-    return this.request("DELETE", `/gists/${id}`)
-  }
 }
+
+export const listGists = (config: GistApiConfig) => request(config, 'GET', '/gists')
+
+export const getGist = (config: GistApiConfig, id: string) => request(config, 'GET', `/gists/${id}`)
+
+export const createGist = (
+    config: GistApiConfig,
+    description: string,
+    files: Record<string, GistFile>,
+    isPublic = false
+) => {
+    const data = { description, public: isPublic, files }
+    return request(config, 'POST', '/gists', {}, data)
+}
+
+export const editGist = (config: GistApiConfig, id: string, description: string, files: Record<string, GistFile>) => {
+    const data = { description, files }
+    return request(config, 'PATCH', `/gists/${id}`, {}, data)
+}
+
+export const deleteGist = (config: GistApiConfig, id: string) => request(config, 'DELETE', `/gists/${id}`)

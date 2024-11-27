@@ -4,6 +4,6 @@
 
 ### Major Changes
 
--   7e0f623: # First Release
+- 7e0f623: # First Release
 
     first release
