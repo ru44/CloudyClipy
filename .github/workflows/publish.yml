@@ -33,11 +33,14 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
+      - name: Build Project
+        run: pnpm build
+
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: pnpm publish --access public
+          publish: pnpm publish --access public --no-git-checks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
