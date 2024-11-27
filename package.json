@@ -21,7 +21,7 @@
     "lintfix": "eslint --fix",
     "dev": "tsx ./src/main.ts",
     "build": "tsup",
-    "release": "pnpm run build && changeset publish"
+    "release": "pnpm build && changeset publish"
   },
   "keywords": [
     "cli",

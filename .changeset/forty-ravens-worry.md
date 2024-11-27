@@ -1,0 +1,5 @@
+---
+'cclip': patch
+---
+
+Urgent fix
