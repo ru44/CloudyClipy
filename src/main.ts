@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
-import { resolve as _resolve } from 'path'
-import yargs from 'yargs'
+import { init, list, copy, paste, clear } from './utils/cloudClip'
 import { hideBin } from 'yargs/helpers'
+import { resolve as _resolve } from 'path'
 import clipboardy from 'clipboardy'
-import { CloudClip } from './utils/cloudClip'
+import yargs from 'yargs'
 
-// Cast argv to `any` to disable type checking on the object
-const argv: any = yargs(hideBin(process.argv))
+const argvPromise = yargs(hideBin(process.argv))
     .scriptName('cclip')
     .command('init <token> [gistId]', 'Initialize with a token and optional Gist ID', (yargs) => {
         yargs.positional('token', { type: 'string', describe: 'GitHub token' })
@@ -23,52 +22,59 @@ const argv: any = yargs(hideBin(process.argv))
     .command('clear', 'Clear the cloud clipboard')
     .help().argv
 
-;(async () => {
-    const configPath = _resolve(process.env.HOME || process.env.USERPROFILE || '', '.cloudclip.json')
-    const cloudClip = new CloudClip(configPath)
+const configPath = _resolve(process.env.HOME || process.env.USERPROFILE || '', '.cloudclip.json')
 
+const handleError = (error: unknown) => {
+    if (error instanceof Error) {
+        console.error(`Error: ${error.message}`)
+    } else {
+        console.error(`Error: ${error}`)
+    }
+}
+
+const readStdin = async (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        let data = ''
+        process.stdin
+            .on('data', (chunk) => (data += chunk))
+            .on('end', () => resolve(data.trim()))
+            .on('error', reject)
+    })
+}
+
+const main = async () => {
     try {
+        const argv = await argvPromise;
         switch (argv._[0]) {
             case 'init': {
-                await cloudClip.init(argv.token, argv.gistId)
+                await init(configPath, argv.token as string, argv.gistId as string)
                 break
             }
             case 'list': {
-                await cloudClip.list()
+                await list(configPath)
                 break
             }
             case 'copy': {
-                const content = process.stdin.isTTY
-                    ? clipboardy.readSync() // Read from clipboard if no input is piped
-                    : await new Promise((resolve, reject) => {
-                          let data = ''
-                          process.stdin
-                              .on('data', (chunk) => (data += chunk))
-                              .on('end', () => resolve(data.trim()))
-                              .on('error', reject)
-                      })
-                await cloudClip.copy(argv.name, content)
+                const content = process.stdin.isTTY ? clipboardy.readSync() : await readStdin()
+                await copy(configPath, argv.name as string, content)
                 break
             }
             case 'paste': {
-                await cloudClip.paste(argv.name)
+                await paste(configPath, argv.name as string)
                 break
             }
             case 'clear': {
-                await cloudClip.clear()
+                await clear(configPath)
                 break
             }
-            default: {
+            default:
                 console.log('Welcome to CloudyClipy 🌥️✂️')
                 console.log('Use --help to see available commands')
-                console.log("Developed with ♥ by '@Ru44'");
-            }
+                console.log("Developed with ♥ by '@Ru44'")
         }
     } catch (error) {
-        if (error instanceof Error) {
-            console.error(`Error: ${error.message}`)
-        } else {
-            console.error(`Error: ${error}`)
-        }
+        handleError(error)
     }
-})()
+}
+
+main()

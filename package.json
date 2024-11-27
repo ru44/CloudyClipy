@@ -7,6 +7,7 @@
   "main": "dist/main.js",
   "module": "dist/main.mjs",
   "types": "dist/main.d.ts",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ru44/CloudyClipy.git"
@@ -16,7 +17,6 @@
   },
   "homepage": "https://github.com/ru44/CloudyClipy#readme",
   "scripts": {
-    "test": "jest",
     "lint": "eslint",
     "lintfix": "eslint --fix",
     "dev": "tsx ./src/main.ts",
@@ -43,7 +43,6 @@
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
     "@eslint/js": "^9.15.0",
-    "@types/jest": "^29.5.14",
     "@types/node": "^22.9.1",
     "@types/shelljs": "^0.8.15",
     "@types/yargs": "^17.0.33",
@@ -56,9 +55,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
-    "rollup-plugin-typescript2": "^0.36.0",
     "tsup": "^8.3.5",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.15.0"
   },

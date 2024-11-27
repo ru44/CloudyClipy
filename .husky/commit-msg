@@ -1,0 +1,2 @@
+# Run commitlint with the commit message passed as an argument
+npx commitlint --edit $1

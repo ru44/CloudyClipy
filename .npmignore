@@ -44,3 +44,9 @@ tsub.config.ts
 
 # Ignore changeset files
 .changeset
+
+SECURITY.md
+BACKERS.md
+.prettierrc
+.prettierignore
+.eslint.config.mjs
