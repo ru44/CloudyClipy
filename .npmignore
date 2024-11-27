@@ -49,4 +49,4 @@ SECURITY.md
 BACKERS.md
 .prettierrc
 .prettierignore
-.eslint.config.mjs
+eslint.config.mjs

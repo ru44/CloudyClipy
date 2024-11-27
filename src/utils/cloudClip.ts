@@ -1,26 +1,26 @@
-import { createGistApiConfig, getGist, createGist, editGist } from './gistApi'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { CloudClipConfig } from '../interfaces/interfaces'
+import { getGist, createGist, editGist } from './gistApi'
+import { createGistApiConfig } from '../helpers/request'
 import clipboardy from 'clipboardy'
 
-
-const readConfig = (configFile: string): CloudClipConfig => {
+function readConfig(configFile: string): CloudClipConfig {
     if (!existsSync(configFile)) {
         return {}
     }
     return JSON.parse(readFileSync(configFile, 'utf-8'))
 }
 
-const saveConfig = (configFile: string, config: CloudClipConfig) => {
+function saveConfig(configFile: string, config: CloudClipConfig) {
     writeFileSync(configFile, JSON.stringify(config, null, 2))
 }
 
-const setToken = (configFile: string, config: CloudClipConfig, token: string) => {
+function setToken(configFile: string, config: CloudClipConfig, token: string) {
     config.token = token
     saveConfig(configFile, config)
 }
 
-const setGistId = (configFile: string, config: CloudClipConfig, gistId: string) => {
+function setGistId(configFile: string, config: CloudClipConfig, gistId: string) {
     config.gistId = gistId
     saveConfig(configFile, config)
 }

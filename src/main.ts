@@ -24,7 +24,7 @@ const argvPromise = yargs(hideBin(process.argv))
 
 const configPath = _resolve(process.env.HOME || process.env.USERPROFILE || '', '.cloudclip.json')
 
-const handleError = (error: unknown) => {
+function handleError(error: unknown) {
     if (error instanceof Error) {
         console.error(`Error: ${error.message}`)
     } else {
@@ -32,7 +32,7 @@ const handleError = (error: unknown) => {
     }
 }
 
-const readStdin = async (): Promise<string> => {
+async function readStdin(): Promise<string> {
     return new Promise((resolve, reject) => {
         let data = ''
         process.stdin
@@ -42,9 +42,9 @@ const readStdin = async (): Promise<string> => {
     })
 }
 
-const main = async () => {
+async function main() {
     try {
-        const argv = await argvPromise;
+        const argv = await argvPromise
         switch (argv._[0]) {
             case 'init': {
                 await init(configPath, argv.token as string, argv.gistId as string)
