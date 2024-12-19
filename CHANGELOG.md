@@ -1,5 +1,11 @@
 # cclip
 
+## 3.0.1
+
+### Patch Changes
+
+- 654ac61: print the version and remove the map
+
 ## 3.0.0
 
 ### Major Changes
