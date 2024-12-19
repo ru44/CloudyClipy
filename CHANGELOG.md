@@ -1,5 +1,11 @@
 # cclip
 
+## 3.0.0
+
+### Major Changes
+
+- c6d9fbf: Now Your Clipboard is Encrypted, also add new feature for purge the gists, Refactor the code to make it more clean
+
 ## 2.1.1
 
 ### Patch Changes
