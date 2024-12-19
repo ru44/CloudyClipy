@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
+import { getArgv } from './utils/listOfCommandHandler'
 import handleCommand from './utils/commandHandler'
 import handleError from './utils/errorHandler'
-import { getArgv } from './utils/listOfCommandHandler'
 
 async function main() {
     try {
