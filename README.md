@@ -61,4 +61,23 @@ when you want to paste something
 cclip paste "the name of gist"
 ```
 
+for more information you can use
+
+```bash
+cclip --help
+```
+
 now you will have in your clipboard the content of the gist
+
+## Troubleshooting
+
+if you faced this issue with paste and looks like this
+
+```bash
+Command failed: C:\Users\Yourusername\WhereYouSavedYourClipBoard\node_modules\.pnpm\clipboardy@4.0.0\node_modules\clipboardy\fallbacks\windows\clipboard_x86_64.exe --paste thread 'main' panicked at 'Error: Could not paste from clipboard: Error { repr: Os { code: 0, message: "The operation completed successfully." } }', src\libcore\result.rs:906:4 note: Run with RUST_BACKTRACE=1 for a backtrace.
+```
+
+You will find the path where the clipboard_x86_64.exe is located in the error and try to do this
+[github issue](https://github.com/sindresorhus/clipboardy/issues/42#issuecomment-2552941150)
+
+C:\Users\Yourusername\WhereYouSavedYourClipBoard\node_modules\.pnpm\clipboardy@4.0.0\node_modules\clipboardy\fallbacks\windows\clipboard_x86_64.exe
