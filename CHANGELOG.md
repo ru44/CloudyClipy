@@ -1,5 +1,11 @@
 # cclip
 
+## 3.1.0
+
+### Minor Changes
+
+- 42c77f2: add custom secret key instead of gist id or use the gist id if the user did not provide any key
+
 ## 3.0.1
 
 ### Patch Changes
