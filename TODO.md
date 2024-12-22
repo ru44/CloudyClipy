@@ -2,16 +2,11 @@
 
 ## Features
 
-- [ ] Allow users to choose between GitLab snippets or GitHub gists for storing clipboard data.
-  - [ ] Add configuration option for preferred service.
-  - [ ] Implement GitLab API integration.
-  - [ ] Update GitHub gist integration.
-  - [ ] Validate service tokens.
-- [ ] Encrypt clipboard data before storing in the cloud.
-  - [ ] Add configuration option for encryption.
-  - [ ] Implement encryption/decryption logic.
-  - [ ] Update storage logic for encrypted data.
-  - [ ] Validate encryption key.
+- [x] Encrypt clipboard data before storing in the cloud.
+  - [x] Add configuration option for encryption.
+  - [x] Implement encryption/decryption logic.
+  - [x] Update storage logic for encrypted data.
+  - [x] Validate encryption key.
 - [ ] Add support for custom expiration times for clipboard data.
   - [ ] Add configuration option for default expiration time.
   - [ ] Allow custom expiration time for clipboard data.

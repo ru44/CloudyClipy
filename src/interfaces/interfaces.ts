@@ -23,6 +23,7 @@ export interface Gist {
 }
 
 export interface CloudClipConfig {
+    secretKey?: any
     token?: string
     gistId?: string
 }

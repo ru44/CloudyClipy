@@ -19,8 +19,8 @@ export default async function handleCommand(command: any, args: any) {
     const content: any = process.stdin.isTTY ? clipboardy.readSync() : await readStdin()
 
     const actions: any = {
-        i: () => init(configPath, args.token, args.gistId),
-        init: () => init(configPath, args.token, args.gistId),
+        i: () => init(configPath, args.token, args.secretKey, args.gistId),
+        init: () => init(configPath, args.token, args.secretKey, args.gistId),
         l: () => list(configPath),
         list: () => list(configPath),
         lc: () => listWithContent(configPath),

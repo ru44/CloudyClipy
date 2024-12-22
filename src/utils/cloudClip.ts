@@ -1,14 +1,20 @@
-import { readConfig, setToken, setGistId } from '../helpers/config'
+import { readConfig, setToken, setGistId, setSecretKey, padSecret } from '../helpers/config'
 import { getGist, createGist, editGist } from './gistApi'
 import { createGistApiConfig } from '../helpers/request'
 import { encrypt, decrypt } from '../helpers/encrypt'
 import clipboardy from 'clipboardy'
+
 import shell from 'shelljs'
 import path from 'path'
 
 const error = 'Gist ID is not configured. Use `--init` first.'
 
-export async function init(configFile: string, token: string, gistId: string | null = null) {
+export async function init(
+    configFile: string,
+    token: string,
+    secretKey: string | null = null,
+    gistId: string | null = null
+) {
     const config = readConfig(configFile)
     setToken(configFile, config, token)
     const apiConfig = createGistApiConfig(token)
@@ -22,6 +28,15 @@ export async function init(configFile: string, token: string, gistId: string | n
         console.log(`New Gist created with ID: ${gistId}`)
     }
     setGistId(configFile, config, gistId!)
+
+    let paddedSecretKey = secretKey || gistId!
+    if (paddedSecretKey.length < 32) {
+        paddedSecretKey = padSecret(paddedSecretKey)
+        setSecretKey(configFile, config, paddedSecretKey)
+    } else {
+        setSecretKey(configFile, config, paddedSecretKey)
+    }
+
     console.log(`Configuration saved in: ${configFile}`)
 }
 
@@ -54,17 +69,17 @@ export async function listWithContent(configFile: string) {
     Object.entries(gist.files).forEach(([name, details]) => {
         const fileDetails = details as { size: number; content: string }
         console.warn(`- ${name} (${fileDetails.size} bytes)`)
-        console.log(decrypt(fileDetails.content, gist.id))
+        console.log(decrypt(fileDetails.content, config.secretKey || gist.id))
     })
 }
 
 export async function copy(configFile: string, name: string, content: string) {
     const config = readConfig(configFile)
     if (!config.gistId) {
-        throw new Error(error)
+        throw new Error('error')
     }
     const apiConfig = createGistApiConfig(config.token!)
-    const encryptedContent = encrypt(content, config.gistId)
+    const encryptedContent = encrypt(content, config.secretKey || config.gistId)
     const files = { [name]: { content: encryptedContent } }
     await editGist(apiConfig, config.gistId, 'Cclip', files)
     console.log('Content copied to cloud clipboard.')
@@ -81,7 +96,7 @@ export async function paste(configFile: string, name: string) {
     if (!file) {
         throw new Error(`File "${name}" not found in the Gist.`)
     }
-    const decryptedContent = decrypt(file.content, config.gistId)
+    const decryptedContent = decrypt(file.content, config.secretKey || config.gistId)
     clipboardy.writeSync(decryptedContent)
     console.log('Content pasted to clipboard.')
 }
