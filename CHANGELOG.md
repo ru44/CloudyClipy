@@ -1,5 +1,11 @@
 # cclip
 
+## 3.1.1
+
+### Patch Changes
+
+- 56e9307: update packages to latest
+
 ## 3.1.0
 
 ### Minor Changes
