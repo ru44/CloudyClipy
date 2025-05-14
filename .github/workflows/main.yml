@@ -1,21 +1,38 @@
-name: CI
+name: main-ci
 on:
   push:
     branches:
-      - "**"
+      - '**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.x
-          cache: "pnpm"
+          node-version: 22.x
+          cache: 'pnpm'
+
+      # Cache pnpm store to speed up installs
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - run: pnpm install
+
       - run: pnpm lint && pnpm build
