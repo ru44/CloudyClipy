@@ -5,6 +5,7 @@ import {
 	cleanupExpired,
 	clear,
 	copy,
+	copyImage,
 	init,
 	list,
 	listWithContent,
@@ -44,6 +45,9 @@ export default async function handleCommand(command: any, args: any) {
 		listWithContent: () => listWithContent(configPath),
 		c: () => copy(configPath, args.name, content, args.expires),
 		copy: () => copy(configPath, args.name, content, args.expires),
+		ci: () => copyImage(configPath, args.name, args.path, args.expires),
+		'copy-image': () =>
+			copyImage(configPath, args.name, args.path, args.expires),
 		p: () => paste(configPath, args.name),
 		paste: () => paste(configPath, args.name),
 		r: () => clear(configPath),

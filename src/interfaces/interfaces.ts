@@ -32,6 +32,9 @@ export interface CloudClipConfig {
 export interface ClipboardMetadata {
 	content: string
 	expiresAt?: number
+	type?: 'text' | 'image'
+	mimeType?: string
+	filename?: string
 }
 
 export interface ExpirationTimeUnit {
