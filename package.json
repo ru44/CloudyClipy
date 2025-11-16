@@ -1,60 +1,54 @@
 {
-  "name": "cclip",
-  "version": "3.1.1",
-  "description": "A simple CLI tool to copy text to clipboard",
-  "license": "MIT",
-  "author": "ru44",
-  "main": "dist/main.js",
-  "module": "dist/main.js",
-  "types": "dist/main.d.ts",
-  "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ru44/CloudyClipy.git"
-  },
-  "bugs": {
-    "url": "https://github.com/ru44/CloudyClipy/issues"
-  },
-  "homepage": "https://github.com/ru44/CloudyClipy#readme",
-  "scripts": {
-    "lint": "eslint",
-    "lintfix": "eslint --fix",
-    "dev": "tsx ./src/main.ts",
-    "build": "tsup",
-    "release": "pnpm build && changeset publish"
-  },
-  "keywords": [
-    "cli",
-    "nodeJs",
-    "javascript",
-    "typescript",
-    "copy",
-    "clipboard"
-  ],
-  "dependencies": {
-    "axios": "^1.9.0",
-    "clipboardy": "^4.0.0",
-    "shelljs": "^0.10.0",
-    "yargs": "^17.7.2"
-  },
-  "devDependencies": {
-    "@changesets/cli": "^2.29.4",
-    "@eslint/js": "^9.26.0",
-    "@types/node": "^22.15.18",
-    "@types/shelljs": "^0.8.16",
-    "@types/yargs": "^17.0.33",
-    "@typescript-eslint/eslint-plugin": "^8.32.1",
-    "@typescript-eslint/parser": "^8.32.1",
-    "eslint": "^9.26.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-prettier": "^5.4.0",
-    "globals": "^16.1.0",
-    "prettier": "^3.5.3",
-    "tsup": "^8.4.0",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.32.1"
-  },
-  "bin": {
-    "cclip": "dist/main.js"
-  }
+	"name": "cclip",
+	"version": "3.1.1",
+	"description": "A simple CLI tool to copy text to clipboard",
+	"license": "MIT",
+	"author": "ru44",
+	"main": "dist/main.js",
+	"module": "dist/main.js",
+	"types": "dist/main.d.ts",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ru44/CloudyClipy.git"
+	},
+	"bugs": {
+		"url": "https://github.com/ru44/CloudyClipy/issues"
+	},
+	"homepage": "https://github.com/ru44/CloudyClipy#readme",
+	"scripts": {
+		"dev": "tsx ./src/main.ts",
+		"build": "tsup",
+		"format": "pnpm exec biome format --write",
+		"lint": "pnpm exec biome lint --write",
+		"check": "pnpm exec biome check --write",
+		"release": "pnpm build && changeset publish"
+	},
+	"keywords": [
+		"cli",
+		"nodeJs",
+		"javascript",
+		"typescript",
+		"copy",
+		"clipboard"
+	],
+	"dependencies": {
+		"axios": "^1.13.2",
+		"clipboardy": "^5.0.0",
+		"shelljs": "^0.10.0",
+		"yargs": "^18.0.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.5",
+		"@changesets/cli": "^2.29.7",
+		"@types/node": "^24.10.1",
+		"@types/shelljs": "^0.8.17",
+		"@types/yargs": "^17.0.35",
+		"globals": "^16.5.0",
+		"tsup": "^8.5.1",
+		"typescript": "^5.9.3"
+	},
+	"bin": {
+		"cclip": "dist/main.js"
+	}
 }

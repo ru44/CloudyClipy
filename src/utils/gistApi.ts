@@ -1,24 +1,31 @@
-import { GistApiConfig, GistFile } from '../interfaces/interfaces'
-import { request } from '../helpers/request'
+import { request } from '../helpers/request.ts'
+import type { GistApiConfig, GistFile } from '../interfaces/interfaces.ts'
 
-export const listGists = (config: GistApiConfig) => request(config, 'GET', '/gists')
+export const listGists = (config: GistApiConfig) =>
+	request(config, 'GET', '/gists')
 
-export const getGist = (config: GistApiConfig, id: string) => request(config, 'GET', `/gists/${id}`)
+export const getGist = (config: GistApiConfig, id: string) =>
+	request(config, 'GET', `/gists/${id}`)
 
-export const deleteGist = (config: GistApiConfig, id: string) => request(config, 'DELETE', `/gists/${id}`)
+export const deleteGist = (config: GistApiConfig, id: string) =>
+	request(config, 'DELETE', `/gists/${id}`)
 
 export function createGist(
-    config: GistApiConfig,
-    description: string,
-    files: Record<string, GistFile>,
-    isPublic = false
+	config: GistApiConfig,
+	description: string,
+	files: Record<string, GistFile>,
+	isPublic = false
 ) {
-    const data = { description, public: isPublic, files }
-    return request(config, 'POST', '/gists', {}, data)
+	const data = { description, public: isPublic, files }
+	return request(config, 'POST', '/gists', {}, data)
 }
 
-export function editGist(config: GistApiConfig, id: string, description: string, files: Record<string, GistFile>) {
-    const data = { description, files }
-    return request(config, 'PATCH', `/gists/${id}`, {}, data)
+export function editGist(
+	config: GistApiConfig,
+	id: string,
+	description: string,
+	files: Record<string, GistFile>
+) {
+	const data = { description, files }
+	return request(config, 'PATCH', `/gists/${id}`, {}, data)
 }
-

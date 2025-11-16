@@ -1,29 +1,29 @@
 export interface GistError {
-    code: number
-    message: string
+	code: number
+	message: string
 }
 
 export interface GistApiConfig {
-    token: string
-    baseUrl: string
-    headers: {
-        Authorization: string
-        'Content-Type': string
-    }
+	token: string
+	baseUrl: string
+	headers: {
+		Authorization: string
+		'Content-Type': string
+	}
 }
 
 export interface GistFile {
-    content: string
+	content: string
 }
 
 export interface Gist {
-    id: string
-    description: string
-    files: Record<string, GistFile>
+	id: string
+	description: string
+	files: Record<string, GistFile>
 }
 
 export interface CloudClipConfig {
-    secretKey?: any
-    token?: string
-    gistId?: string
+	secretKey?: any
+	token?: string
+	gistId?: string
 }
