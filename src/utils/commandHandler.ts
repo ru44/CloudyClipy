@@ -1,15 +1,16 @@
 import { resolve as _resolve } from 'node:path'
 import clipboardy from 'clipboardy'
 import version from '../../package.json' with { type: 'json' }
-
 import {
+	cleanupExpired,
 	clear,
 	copy,
 	init,
 	list,
 	listWithContent,
 	paste,
-	purge
+	purge,
+	setExpiration
 } from './cloudClip.ts'
 
 const configPath = _resolve(
@@ -41,14 +42,18 @@ export default async function handleCommand(command: any, args: any) {
 		list: () => list(configPath),
 		lc: () => listWithContent(configPath),
 		listWithContent: () => listWithContent(configPath),
-		c: () => copy(configPath, args.name, content),
-		copy: () => copy(configPath, args.name, content),
+		c: () => copy(configPath, args.name, content, args.expires),
+		copy: () => copy(configPath, args.name, content, args.expires),
 		p: () => paste(configPath, args.name),
 		paste: () => paste(configPath, args.name),
 		r: () => clear(configPath),
 		clear: () => clear(configPath),
 		pr: () => purge(configPath),
-		purge: () => purge(configPath)
+		purge: () => purge(configPath),
+		se: () => setExpiration(configPath, args.expiration),
+		'set-expiration': () => setExpiration(configPath, args.expiration),
+		ce: () => cleanupExpired(configPath),
+		'cleanup-expired': () => cleanupExpired(configPath)
 	}
 
 	const action: any = actions[command]

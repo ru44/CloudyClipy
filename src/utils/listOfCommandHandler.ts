@@ -29,7 +29,13 @@ export async function getArgv() {
 			['c <name>', 'copy'],
 			'Copy content to the cloud clipboard',
 			(yargs) => {
-				yargs.positional('name', { type: 'string', describe: 'File name' })
+				yargs
+					.positional('name', { type: 'string', describe: 'File name' })
+					.option('expires', {
+						type: 'string',
+						describe: 'Expiration time (e.g., 30m, 2h, 7d)',
+						alias: 'e'
+					})
 			}
 		)
 		.command(
@@ -41,5 +47,19 @@ export async function getArgv() {
 		)
 		.command(['r', 'clear'], 'Clear the cloud clipboard')
 		.command(['pr', 'purge'], 'Purge (Remove Revisions) the cloud clipboard')
+		.command(
+			['se <expiration>', 'set-expiration'],
+			'Set default expiration time for clipboard data',
+			(yargs) => {
+				yargs.positional('expiration', {
+					type: 'string',
+					describe: 'Default expiration time (e.g., 30m, 2h, 7d)'
+				})
+			}
+		)
+		.command(
+			['ce', 'cleanup-expired'],
+			'Remove all expired clipboard entries'
+		)
 		.help().argv
 }
