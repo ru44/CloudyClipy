@@ -41,6 +41,19 @@ export function setSecretKey(
 	saveConfig(configFile, config)
 }
 
+export function setDefaultExpiration(
+	configFile: string,
+	config: CloudClipConfig,
+	expiration: string
+) {
+	config.defaultExpiration = expiration
+	saveConfig(configFile, config)
+}
+
+export function getDefaultExpiration(config: CloudClipConfig): string | undefined {
+	return config.defaultExpiration
+}
+
 export function padSecret(secret: string): string {
 	if (secret.length < 32) {
 		const padding = crypto

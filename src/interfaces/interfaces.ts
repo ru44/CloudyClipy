@@ -26,4 +26,15 @@ export interface CloudClipConfig {
 	secretKey?: any
 	token?: string
 	gistId?: string
+	defaultExpiration?: string
+}
+
+export interface ClipboardMetadata {
+	content: string
+	expiresAt?: number
+}
+
+export interface ExpirationTimeUnit {
+	value: number
+	unit: 'm' | 'h' | 'd'
 }
