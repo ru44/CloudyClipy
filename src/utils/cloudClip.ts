@@ -1,3 +1,4 @@
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import clipboardy from 'clipboardy'
 import shell from 'shelljs'
@@ -206,6 +207,92 @@ export async function copy(
 		)
 	} else {
 		console.log('Content copied to cloud clipboard.')
+	}
+}
+
+const ALLOWED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+const EXT_MIME: Record<string, string> = {
+	'.png': 'image/png',
+	'.jpg': 'image/jpeg',
+	'.jpeg': 'image/jpeg',
+	'.gif': 'image/gif',
+	'.webp': 'image/webp'
+}
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+
+export async function copyImage(
+	configFile: string,
+	name: string,
+	imagePath: string,
+	expiration?: string
+) {
+	const config = readConfig(configFile)
+	if (!config.gistId) {
+		throw new Error(error)
+	}
+	const token = config.token
+	if (!token) {
+		throw new Error('Token is not configured.')
+	}
+
+	if (!imagePath || typeof imagePath !== 'string') {
+		throw new Error('Image path is required.')
+	}
+	if (!existsSync(imagePath)) {
+		throw new Error(`Image not found at path: ${imagePath}`)
+	}
+
+	const ext = path.extname(imagePath).toLowerCase()
+	if (!ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
+		throw new Error(
+			`Unsupported image format: ${ext}. Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(', ')}`
+		)
+	}
+
+	const stats = statSync(imagePath)
+	if (stats.size > MAX_IMAGE_SIZE) {
+		throw new Error(
+			`Image is too large (${Math.ceil(stats.size / (1024 * 1024))}MB). Max allowed is ${Math.floor(
+				MAX_IMAGE_SIZE / (1024 * 1024)
+			)}MB.`
+		)
+	}
+
+	// Use provided expiration or default from config
+	const expirationTime = expiration || getDefaultExpiration(config)
+	if (expirationTime && !validateExpirationFormat(expirationTime)) {
+		throw new Error(
+			`Invalid expiration format: "${expirationTime}". Use format: <number><unit> (e.g., 30m, 2h, 7d)`
+		)
+	}
+
+	const apiConfig = createGistApiConfig(token)
+	const mime = EXT_MIME[ext]
+	const fileBuf = readFileSync(imagePath)
+	const base64 = fileBuf.toString('base64')
+	const dataUri = `data:${mime};base64,${base64}`
+
+	// If name has no extension, append the original
+	const finalName = path.extname(name) ? name : `${name}${ext}`
+
+	const wrappedContent = wrapWithMetadata(dataUri, expirationTime, {
+		type: 'image',
+		mimeType: mime,
+		filename: path.basename(finalName)
+	})
+	const encryptedContent = encrypt(
+		wrappedContent,
+		config.secretKey || config.gistId
+	)
+	const files = { [finalName]: { content: encryptedContent } }
+	await editGist(apiConfig, config.gistId, 'Cclip', files)
+
+	if (expirationTime) {
+		console.log(
+			`Image copied to cloud clipboard (expires in ${expirationTime}).`
+		)
+	} else {
+		console.log('Image copied to cloud clipboard.')
 	}
 }
 

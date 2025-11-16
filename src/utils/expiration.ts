@@ -79,11 +79,13 @@ export function isExpired(expiresAt: number | undefined): boolean {
  */
 export function wrapWithMetadata(
 	content: string,
-	expirationStr?: string
+	expirationStr?: string,
+	extra?: Partial<ClipboardMetadata>
 ): string {
 	const metadata: ClipboardMetadata = {
 		content,
-		expiresAt: calculateExpirationTimestamp(expirationStr)
+		expiresAt: calculateExpirationTimestamp(expirationStr),
+		...extra
 	}
 	return JSON.stringify(metadata)
 }

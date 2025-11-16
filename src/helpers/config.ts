@@ -50,7 +50,9 @@ export function setDefaultExpiration(
 	saveConfig(configFile, config)
 }
 
-export function getDefaultExpiration(config: CloudClipConfig): string | undefined {
+export function getDefaultExpiration(
+	config: CloudClipConfig
+): string | undefined {
 	return config.defaultExpiration
 }
 
