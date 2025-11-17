@@ -1,5 +1,11 @@
 # cclip
 
+## 4.0.0
+
+### Major Changes
+
+- c8850c1: add two new features support image and expiration
+
 ## 3.1.1
 
 ### Patch Changes
@@ -48,4 +54,4 @@
 
 - 7e0f623: # First Release
 
-    first release
+  first release
