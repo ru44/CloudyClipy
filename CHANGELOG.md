@@ -1,5 +1,11 @@
 # cclip
 
+## 4.0.1
+
+### Patch Changes
+
+- c1df507: just fix help message
+
 ## 4.0.0
 
 ### Major Changes
