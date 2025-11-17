@@ -65,8 +65,8 @@ export default async function handleCommand(command: any, args: any) {
 		await action()
 	} else {
 		console.log('Welcome to CloudyClipy 🌥️✂️')
-		console.warn(`You are using version ${version}`)
-		console.log('Use --help to see available commands')
+		console.warn(`You are using version ${version.version}`)
+		console.log('Use cclip help to see available commands')
 		console.log("Developed with ♥ by '@Ru44'")
 	}
 }

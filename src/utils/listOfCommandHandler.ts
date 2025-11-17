@@ -1,5 +1,6 @@
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
+import { showCustomHelp } from './helpFormatter.ts'
 
 export async function getArgv() {
 	const cli = yargs(hideBin(process.argv))
@@ -83,10 +84,9 @@ export async function getArgv() {
 			'Show help and available commands',
 			() => {},
 			() => {
-				cli.showHelp()
-				process.exit(0)
+				showCustomHelp()
 			}
 		)
-		.help()
+		.help(false)
 	return await (cli as any).argv
 }
