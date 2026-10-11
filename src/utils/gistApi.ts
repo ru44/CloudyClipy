@@ -1,4 +1,4 @@
-import { request } from '../helpers/request.ts'
+import { request, requestText } from '../helpers/request.ts'
 import type { GistApiConfig, GistFile } from '../interfaces/interfaces.ts'
 
 export const listGists = (config: GistApiConfig) =>
@@ -6,6 +6,11 @@ export const listGists = (config: GistApiConfig) =>
 
 export const getGist = (config: GistApiConfig, id: string) =>
 	request(config, 'GET', `/gists/${id}`)
+
+export const getGistFileContent = (config: GistApiConfig, file: GistFile) =>
+	file.truncated && file.raw_url
+		? requestText(config, file.raw_url)
+		: Promise.resolve(file.content)
 
 export const deleteGist = (config: GistApiConfig, id: string) =>
 	request(config, 'DELETE', `/gists/${id}`)

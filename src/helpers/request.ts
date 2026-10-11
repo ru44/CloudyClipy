@@ -25,6 +25,25 @@ export async function request(
 	}
 }
 
+/**
+ * Fetches a raw file as text. The Gist API truncates file content above
+ * 1MB, so large entries must be downloaded from their raw_url.
+ */
+export async function requestText(config: GistApiConfig, url: string) {
+	try {
+		const response = await axios.get<string>(url, {
+			headers: { Authorization: config.headers.Authorization },
+			responseType: 'text'
+		})
+		return response.data
+	} catch (error) {
+		throw {
+			code: axios.isAxiosError(error) ? (error.response?.status ?? -1) : -1,
+			message: (error as Error).message
+		} as GistError
+	}
+}
+
 export const createGistApiConfig = (token: string): GistApiConfig => ({
 	token,
 	baseUrl: 'https://api.github.com',

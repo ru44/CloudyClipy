@@ -40,8 +40,8 @@ export async function getArgv() {
 			}
 		)
 		.command(
-			['ci <name> <path>', 'copy-image'],
-			'Copy an image file to the cloud clipboard',
+			['ci <name> [path]', 'copy-image'],
+			'Copy an image file (or the image in your clipboard) to the cloud clipboard',
 			(yargs) => {
 				yargs
 					.positional('name', {
@@ -50,7 +50,7 @@ export async function getArgv() {
 					})
 					.positional('path', {
 						type: 'string',
-						describe: 'Path to image file'
+						describe: 'Path to image file (defaults to the clipboard image)'
 					})
 					.option('expires', {
 						type: 'string',
@@ -63,7 +63,13 @@ export async function getArgv() {
 			['p <name>', 'paste'],
 			'Paste content from the cloud clipboard',
 			(yargs) => {
-				yargs.positional('name', { type: 'string', describe: 'File name' })
+				yargs
+					.positional('name', { type: 'string', describe: 'File name' })
+					.option('out', {
+						type: 'string',
+						describe: 'Save to a file instead of the clipboard',
+						alias: 'o'
+					})
 			}
 		)
 		.command(['r', 'clear'], 'Clear the cloud clipboard')

@@ -1,6 +1,6 @@
 import { resolve as _resolve } from 'node:path'
-import clipboardy from 'clipboardy'
 import version from '../../package.json' with { type: 'json' }
+import { readText } from '../helpers/clipboard.ts'
 import {
 	cleanupExpired,
 	clear,
@@ -32,9 +32,10 @@ async function readStdin() {
 }
 
 export default async function handleCommand(command: any, args: any) {
-	const content: any = process.stdin.isTTY
-		? clipboardy.readSync()
-		: await readStdin()
+	// Only `copy` needs the clipboard, so other commands work on headless
+	// machines and don't block waiting for stdin.
+	const readContent = async (): Promise<any> =>
+		process.stdin.isTTY ? readText() : readStdin()
 
 	const actions: any = {
 		i: () => init(configPath, args.token, args.secretKey, args.gistId),
@@ -43,13 +44,15 @@ export default async function handleCommand(command: any, args: any) {
 		list: () => list(configPath),
 		lc: () => listWithContent(configPath),
 		listWithContent: () => listWithContent(configPath),
-		c: () => copy(configPath, args.name, content, args.expires),
-		copy: () => copy(configPath, args.name, content, args.expires),
+		c: async () =>
+			copy(configPath, args.name, await readContent(), args.expires),
+		copy: async () =>
+			copy(configPath, args.name, await readContent(), args.expires),
 		ci: () => copyImage(configPath, args.name, args.path, args.expires),
 		'copy-image': () =>
 			copyImage(configPath, args.name, args.path, args.expires),
-		p: () => paste(configPath, args.name),
-		paste: () => paste(configPath, args.name),
+		p: () => paste(configPath, args.name, args.out),
+		paste: () => paste(configPath, args.name, args.out),
 		r: () => clear(configPath),
 		clear: () => clear(configPath),
 		pr: () => purge(configPath),
