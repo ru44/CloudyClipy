@@ -1,6 +1,6 @@
-import { resolve as _resolve } from 'node:path'
 import version from '../../package.json' with { type: 'json' }
 import { readText } from '../helpers/clipboard.ts'
+import { CONFIG_PATH as configPath } from '../helpers/config.ts'
 import {
 	cleanupExpired,
 	clear,
@@ -11,13 +11,10 @@ import {
 	listWithContent,
 	paste,
 	purge,
+	remove,
+	rotateKey,
 	setExpiration
 } from './cloudClip.ts'
-
-const configPath = _resolve(
-	process.env.HOME || process.env.USERPROFILE || '',
-	'.cloudclip.json'
-)
 
 async function readStdin() {
 	return new Promise((resolve, reject) => {
@@ -51,8 +48,10 @@ export default async function handleCommand(command: any, args: any) {
 		ci: () => copyImage(configPath, args.name, args.path, args.expires),
 		'copy-image': () =>
 			copyImage(configPath, args.name, args.path, args.expires),
-		p: () => paste(configPath, args.name, args.out),
-		paste: () => paste(configPath, args.name, args.out),
+		p: () => paste(configPath, args.name, args),
+		paste: () => paste(configPath, args.name, args),
+		d: () => remove(configPath, args.name),
+		delete: () => remove(configPath, args.name),
 		r: () => clear(configPath),
 		clear: () => clear(configPath),
 		pr: () => purge(configPath),
@@ -60,7 +59,9 @@ export default async function handleCommand(command: any, args: any) {
 		se: () => setExpiration(configPath, args.expiration),
 		'set-expiration': () => setExpiration(configPath, args.expiration),
 		ce: () => cleanupExpired(configPath),
-		'cleanup-expired': () => cleanupExpired(configPath)
+		'cleanup-expired': () => cleanupExpired(configPath),
+		rk: () => rotateKey(configPath, args.secretKey),
+		'rotate-key': () => rotateKey(configPath, args.secretKey)
 	}
 
 	const action: any = actions[command]

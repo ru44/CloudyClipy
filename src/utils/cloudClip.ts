@@ -4,14 +4,13 @@ import shell from 'shelljs'
 import { readImage, writeImage, writeText } from '../helpers/clipboard.ts'
 import {
 	getDefaultExpiration,
-	padSecret,
 	readConfig,
 	setDefaultExpiration,
 	setGistId,
 	setSecretKey,
 	setToken
 } from '../helpers/config.ts'
-import { decrypt, encrypt } from '../helpers/encrypt.ts'
+import { decrypt, encrypt, generateSecretKey } from '../helpers/encrypt.ts'
 import {
 	detectImageMime,
 	extensionForMime,
@@ -22,6 +21,7 @@ import {
 import { createGistApiConfig } from '../helpers/request.ts'
 import type {
 	ClipboardMetadata,
+	CloudClipConfig,
 	Gist,
 	GistApiConfig,
 	GistFile
@@ -41,6 +41,24 @@ const error = 'Gist ID is not configured. Use `--init` first.'
 const PLACEHOLDER_FILE = 'Cclip'
 const PLACEHOLDER = { content: 'Your clipboard in the cloud.' }
 
+interface CipherKey {
+	secret: string
+	salt: string
+}
+
+// Configs from before cclip 3.1 have no secretKey and used the gist ID.
+function keyFor(config: CloudClipConfig, gistId: string): CipherKey {
+	return { secret: config.secretKey || gistId, salt: gistId }
+}
+
+function warnIfWeakKey(config: CloudClipConfig) {
+	if (!config.secretKey || config.secretKey === config.gistId) {
+		console.warn(
+			'Warning: your secret key is your gist ID, which is part of the gist URL. Run `cclip rotate-key` to switch to a random key.'
+		)
+	}
+}
+
 type Entry =
 	| { status: 'ok'; metadata: ClipboardMetadata }
 	| { status: 'expired' }
@@ -54,12 +72,12 @@ type Entry =
 async function readEntry(
 	apiConfig: GistApiConfig,
 	file: GistFile,
-	secret: string
+	key: CipherKey
 ): Promise<Entry> {
 	const content = await getGistFileContent(apiConfig, file)
 	let decrypted: string
 	try {
-		decrypted = decrypt(content, secret)
+		decrypted = decrypt(content, key.secret, key.salt)
 	} catch {
 		return { status: 'unreadable' }
 	}
@@ -105,15 +123,17 @@ export async function init(
 	}
 	setGistId(configFile, config, gistId)
 
-	let paddedSecretKey = secretKey || gistId
-	if (paddedSecretKey.length < 32) {
-		paddedSecretKey = padSecret(paddedSecretKey)
-		setSecretKey(configFile, config, paddedSecretKey)
-	} else {
-		setSecretKey(configFile, config, paddedSecretKey)
-	}
+	// The key is derived with scrypt, so any passphrase length works
+	const key = secretKey || generateSecretKey()
+	setSecretKey(configFile, config, key)
 
 	console.log(`Configuration saved in: ${configFile}`)
+	printSetupHint(key, gistId)
+}
+
+function printSetupHint(secretKey: string, gistId: string) {
+	console.log('To use this clipboard on another machine, run:')
+	console.log(`  cclip init <token> ${secretKey} ${gistId}`)
 }
 
 export async function setExpiration(configFile: string, expiration: string) {
@@ -144,7 +164,7 @@ export async function cleanupExpired(configFile: string) {
 	let expiredCount = 0
 
 	for (const [name, file] of Object.entries(gist.files)) {
-		const entry = await readEntry(apiConfig, file, config.secretKey || gist.id)
+		const entry = await readEntry(apiConfig, file, keyFor(config, gist.id))
 		if (entry.status === 'expired') {
 			filesToDelete[name] = null
 			expiredCount++
@@ -174,7 +194,7 @@ async function printEntries(configFile: string, withContent: boolean) {
 	console.log(`Description: ${gist.description}`)
 	console.log('Files:')
 	for (const [name, file] of Object.entries(gist.files)) {
-		const entry = await readEntry(apiConfig, file, config.secretKey || gist.id)
+		const entry = await readEntry(apiConfig, file, keyFor(config, gist.id))
 
 		if (entry.status === 'unreadable') {
 			if (name !== PLACEHOLDER_FILE) {
@@ -225,6 +245,7 @@ export async function copy(
 	if (!content) {
 		throw new Error('Nothing to copy: the clipboard (or stdin) is empty.')
 	}
+	warnIfWeakKey(config)
 
 	// Use provided expiration or default from config
 	const expirationTime = expiration || getDefaultExpiration(config)
@@ -238,10 +259,8 @@ export async function copy(
 
 	const apiConfig = createGistApiConfig(token)
 	const wrappedContent = wrapWithMetadata(content, expirationTime)
-	const encryptedContent = encrypt(
-		wrappedContent,
-		config.secretKey || config.gistId
-	)
+	const { secret, salt } = keyFor(config, config.gistId)
+	const encryptedContent = encrypt(wrappedContent, secret, salt)
 	const files = { [name]: { content: encryptedContent } }
 	await editGist(apiConfig, config.gistId, 'Cclip', files)
 
@@ -254,9 +273,9 @@ export async function copy(
 	}
 }
 
-// Images are stored as hex(AES(base64)), roughly 2.7x their size. The Gist
-// raw endpoint only serves files up to 10MB, so cap images at 3MB (~8MB stored).
-const MAX_IMAGE_SIZE = 3 * 1024 * 1024 // 3MB
+// Images are stored as base64(AES(base64)), roughly 1.8x their size. The Gist
+// raw endpoint only serves files up to 10MB, so cap images at 5MB (~9.3MB stored).
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 
 function readImageFile(imagePath: string): Buffer {
 	if (!existsSync(imagePath)) {
@@ -291,6 +310,8 @@ export async function copyImage(
 	if (!token) {
 		throw new Error('Token is not configured.')
 	}
+
+	warnIfWeakKey(config)
 
 	// Without a path, take the image currently in the system clipboard
 	let data: Buffer
@@ -340,10 +361,8 @@ export async function copyImage(
 			filename: path.basename(finalName)
 		}
 	)
-	const encryptedContent = encrypt(
-		wrappedContent,
-		config.secretKey || config.gistId
-	)
+	const { secret, salt } = keyFor(config, config.gistId)
+	const encryptedContent = encrypt(wrappedContent, secret, salt)
 	const files = { [finalName]: { content: encryptedContent } }
 	await editGist(apiConfig, config.gistId, 'Cclip', files)
 
@@ -365,7 +384,18 @@ function resolveOutPath(out: string, fileName: string) {
 		: out
 }
 
-export async function paste(configFile: string, name: string, out?: string) {
+export interface PasteOptions {
+	// Save to this file or directory instead of the clipboard
+	out?: string
+	// Write the raw content to stdout instead of the clipboard
+	stdout?: boolean
+}
+
+export async function paste(
+	configFile: string,
+	name: string,
+	{ out, stdout }: PasteOptions = {}
+) {
 	const config = readConfig(configFile)
 	if (!config.gistId) {
 		throw new Error(error)
@@ -382,11 +412,7 @@ export async function paste(configFile: string, name: string, out?: string) {
 	}
 	const [fileName, file] = found
 
-	const entry = await readEntry(
-		apiConfig,
-		file,
-		config.secretKey || config.gistId
-	)
+	const entry = await readEntry(apiConfig, file, keyFor(config, config.gistId))
 	if (entry.status === 'unreadable') {
 		throw new Error(
 			`Could not decrypt "${fileName}". Was it copied with a different secret key?`
@@ -401,6 +427,15 @@ export async function paste(configFile: string, name: string, out?: string) {
 		const image = fromDataUri(metadata.content)
 		if (!image) {
 			throw new Error(`Image "${fileName}" is corrupted.`)
+		}
+		if (stdout) {
+			if (process.stdout.isTTY) {
+				throw new Error(
+					'Refusing to print binary image data to the terminal. Redirect it (> image.png) or use --out.'
+				)
+			}
+			process.stdout.write(image.data)
+			return
 		}
 		if (out) {
 			const target = resolveOutPath(out, metadata.filename || fileName)
@@ -419,6 +454,10 @@ export async function paste(configFile: string, name: string, out?: string) {
 		return
 	}
 
+	if (stdout) {
+		process.stdout.write(metadata.content)
+		return
+	}
 	if (out) {
 		const target = resolveOutPath(out, fileName)
 		writeFileSync(target, metadata.content)
@@ -451,6 +490,82 @@ export async function clear(configFile: string) {
 	files[PLACEHOLDER_FILE] = PLACEHOLDER
 	await editGist(apiConfig, config.gistId, 'Cclip', files)
 	console.log('Cloud clipboard cleared.')
+}
+
+export async function remove(configFile: string, name: string) {
+	const config = readConfig(configFile)
+	if (!config.gistId) {
+		throw new Error(error)
+	}
+	const token = config.token
+	if (!token) {
+		throw new Error('Token is not configured.')
+	}
+	const apiConfig = createGistApiConfig(token)
+	const gist: Gist = await getGist(apiConfig, config.gistId)
+	const found = findFile(gist, name)
+	if (!found) {
+		throw new Error(`File "${name}" not found in the Gist.`)
+	}
+	const [fileName] = found
+
+	const files: { [key: string]: any } = { [fileName]: null }
+	// A gist can't be empty, so restore the placeholder when removing the last file
+	if (fileName === PLACEHOLDER_FILE || Object.keys(gist.files).length === 1) {
+		files[PLACEHOLDER_FILE] = PLACEHOLDER
+	}
+	await editGist(apiConfig, config.gistId, 'Cclip', files)
+	console.log(`Deleted "${fileName}" from the cloud clipboard.`)
+}
+
+/**
+ * Re-encrypts every entry with a new secret key (and upgrades v1 entries
+ * to the v2 format). Entries the current key can't decrypt are left as is.
+ */
+export async function rotateKey(configFile: string, newKey?: string) {
+	const config = readConfig(configFile)
+	if (!config.gistId) {
+		throw new Error(error)
+	}
+	const token = config.token
+	if (!token) {
+		throw new Error('Token is not configured.')
+	}
+	const apiConfig = createGistApiConfig(token)
+	const gist: Gist = await getGist(apiConfig, config.gistId)
+	const oldKey = keyFor(config, gist.id)
+	const secretKey = newKey || generateSecretKey()
+
+	const files: { [key: string]: GistFile } = {}
+	let skipped = 0
+	for (const [name, file] of Object.entries(gist.files)) {
+		const content = await getGistFileContent(apiConfig, file)
+		let decrypted: string
+		try {
+			decrypted = decrypt(content, oldKey.secret, oldKey.salt)
+		} catch {
+			if (name !== PLACEHOLDER_FILE) skipped++
+			continue
+		}
+		files[name] = { content: encrypt(decrypted, secretKey, gist.id) }
+	}
+
+	const rotated = Object.keys(files).length
+	if (rotated > 0) {
+		await editGist(apiConfig, config.gistId, 'Cclip', files)
+	}
+	setSecretKey(configFile, config, secretKey)
+
+	console.log(
+		`Re-encrypted ${rotated} entr${rotated === 1 ? 'y' : 'ies'} with the new key.`
+	)
+	if (skipped > 0) {
+		console.warn(
+			`Skipped ${skipped} entr${skipped === 1 ? 'y' : 'ies'} that the old key could not decrypt.`
+		)
+	}
+	console.log('Other machines need the new key.')
+	printSetupHint(secretKey, gist.id)
 }
 
 export async function purge(configFile: string) {
