@@ -28,6 +28,7 @@
 - [x] Store ciphertext as base64 instead of hex (~33% smaller; image limit back to 5MB).
 - [x] Derive the key from a passphrase so a second machine only needs the passphrase.
 - [x] Unit tests for expiration, image detection and encryption.
+- [x] Notify users when a newer version is published (`NO_UPDATE_NOTIFIER=1` to opt out).
 
 ## Next
 

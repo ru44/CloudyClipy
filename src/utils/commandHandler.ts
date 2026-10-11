@@ -1,6 +1,6 @@
-import { resolve as _resolve } from 'node:path'
 import version from '../../package.json' with { type: 'json' }
 import { readText } from '../helpers/clipboard.ts'
+import { CONFIG_PATH as configPath } from '../helpers/config.ts'
 import {
 	cleanupExpired,
 	clear,
@@ -15,11 +15,6 @@ import {
 	rotateKey,
 	setExpiration
 } from './cloudClip.ts'
-
-const configPath = _resolve(
-	process.env.HOME || process.env.USERPROFILE || '',
-	'.cloudclip.json'
-)
 
 async function readStdin() {
 	return new Promise((resolve, reject) => {

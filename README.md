@@ -31,6 +31,7 @@ cclip paste key        # now it's in your clipboard
 - **📦 Large entries.** Entries over GitHub's 1 MB API limit are downloaded from the raw file automatically.
 - **🧹 History control.** `delete` removes one entry, `clear` removes all of them, and `purge` also rewrites the gist's revision history.
 - **💻 Cross-platform.** macOS, Linux (Wayland and X11) and Windows.
+- **🔔 Update notifications.** cclip tells you when a new version is out (checked at most once a day).
 - **🆓 Zero infrastructure.** Your data lives in your own GitHub account.
 
 ## 🚀 Quick start
@@ -153,6 +154,17 @@ Then run `cclip rotate-key` once. This re-encrypts your old entries in the new f
 | Headless / SSH | ✅ with pipes and `--out` | ✅ with `--out` |
 
 On Debian or Ubuntu, install the Linux tools with `sudo apt install wl-clipboard xclip`.
+
+## 🔔 Update notifications
+
+When a newer version of cclip is published, you'll see a short notice after a command finishes:
+
+```text
+Update available 4.0.1 → 5.0.0
+Run npm i -g cclip@latest to update.
+```
+
+cclip asks the npm registry at most once a day, in parallel with your command, and caches the answer in `~/.cloudclip-update.json`. The check never runs in CI or when output isn't a terminal, and failures are ignored. To turn it off, set `NO_UPDATE_NOTIFIER=1`.
 
 ## 🛠️ Troubleshooting
 

@@ -11,6 +11,7 @@ Encryption v2, image clipboard support and new commands
 - New `rotate-key [secretKey]` command re-encrypts every entry with a new key
 - New `delete <name>` command removes a single entry
 - `paste --stdout` prints an entry (text or raw image bytes) for piping
+- Show a notice when a newer cclip version is published (checked at most once a day; set `NO_UPDATE_NOTIFIER=1` to disable)
 - `paste --out <file|dir>` saves an entry to disk
 - `paste` now puts images back into the system clipboard on macOS, Windows, Wayland and X11 (previously it pasted the raw data URI as text)
 - `copy-image <name>` without a path uploads the image currently in your clipboard
