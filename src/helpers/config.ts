@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 
 import type { CloudClipConfig } from '../interfaces/interfaces.ts'
@@ -54,15 +53,4 @@ export function getDefaultExpiration(
 	config: CloudClipConfig
 ): string | undefined {
 	return config.defaultExpiration
-}
-
-export function padSecret(secret: string): string {
-	if (secret.length < 32) {
-		const padding = crypto
-			.randomBytes(32 - secret.length)
-			.toString('hex')
-			.slice(0, 32 - secret.length)
-		return secret + padding
-	}
-	return secret
 }

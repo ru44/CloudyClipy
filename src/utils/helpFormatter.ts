@@ -11,7 +11,8 @@ USAGE:
 COMMANDS:
   Init & Setup:
     i, init <token> [secretKey] [gistId]
-        Initialize with GitHub token and optional secret key & Gist ID
+        Initialize with GitHub token, optional secret key (passphrase)
+        and Gist ID. A random secret key is generated if omitted.
         
   Copy & Paste:
     c, copy <name> [-e <time>]
@@ -23,9 +24,10 @@ COMMANDS:
         clipboard when no path is given)
         Options: -e, --expires  Expiration time (e.g., 30m, 2h, 7d)
         
-    p, paste <name> [-o <file>]
+    p, paste <name> [-o <file>] [-s]
         Paste content (text or image) from cloud clipboard
-        Options: -o, --out  Save to a file or directory instead
+        Options: -o, --out     Save to a file or directory instead
+                 -s, --stdout  Print to stdout instead (for pipes)
         
   List & View:
     l, list
@@ -40,7 +42,13 @@ COMMANDS:
         
     ce, cleanup-expired
         Remove all expired clipboard entries
+
+    rk, rotate-key [secretKey]
+        Re-encrypt all entries with a new secret key (random if omitted)
         
+    d, delete <name>
+        Delete a single entry
+
     r, clear
         Clear the entire cloud clipboard
         
@@ -61,6 +69,8 @@ EXAMPLES:
   cclip copy-image screenshot
   cclip paste mydata
   cclip paste screenshot -o ./downloads
+  cclip paste mydata --stdout | grep foo
+  cclip delete mydata
   cclip list
   cclip set-expiration 24h
   cclip cleanup-expired

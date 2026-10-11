@@ -13,7 +13,7 @@ export async function getArgv() {
 					.positional('token', { type: 'string', describe: 'GitHub token' })
 					.positional('secretKey', {
 						type: 'string',
-						describe: 'Secret key (optional Length should be 32 bit)'
+						describe: 'Secret key / passphrase (random if omitted)'
 					})
 					.positional('gistId', {
 						type: 'string',
@@ -70,6 +70,19 @@ export async function getArgv() {
 						describe: 'Save to a file instead of the clipboard',
 						alias: 'o'
 					})
+					.option('stdout', {
+						type: 'boolean',
+						describe: 'Print to stdout instead of the clipboard',
+						alias: 's'
+					})
+					.conflicts('out', 'stdout')
+			}
+		)
+		.command(
+			['d <name>', 'delete'],
+			'Delete a single entry from the cloud clipboard',
+			(yargs) => {
+				yargs.positional('name', { type: 'string', describe: 'File name' })
 			}
 		)
 		.command(['r', 'clear'], 'Clear the cloud clipboard')
@@ -85,6 +98,16 @@ export async function getArgv() {
 			}
 		)
 		.command(['ce', 'cleanup-expired'], 'Remove all expired clipboard entries')
+		.command(
+			['rk [secretKey]', 'rotate-key'],
+			'Re-encrypt all entries with a new secret key',
+			(yargs) => {
+				yargs.positional('secretKey', {
+					type: 'string',
+					describe: 'New secret key (random if omitted)'
+				})
+			}
+		)
 		.command(
 			['h', 'help'],
 			'Show help and available commands',
