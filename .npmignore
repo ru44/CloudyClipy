@@ -50,3 +50,8 @@ BACKERS.md
 .prettierrc
 .prettierignore
 eslint.config.mjs
+# Local tooling and repo config
+.claude
+biome.json
+pnpm-workspace.yaml
+.gitattributes
