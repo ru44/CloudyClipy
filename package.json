@@ -1,6 +1,6 @@
 {
 	"name": "cclip",
-	"version": "4.0.1",
+	"version": "5.0.0",
 	"description": "A simple CLI tool to copy text to clipboard",
 	"license": "MIT",
 	"author": "ru44",
