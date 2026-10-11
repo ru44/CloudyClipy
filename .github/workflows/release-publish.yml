@@ -10,6 +10,9 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
+  # npm trusted publishing: lets npm verify this workflow via OIDC,
+  # so no NPM_TOKEN secret is needed
+  id-token: write
 
 jobs:
   publish:
@@ -29,6 +32,11 @@ jobs:
         with:
           node-version: 22.x
           cache: 'pnpm'
+
+      # Trusted publishing needs npm >= 11.5.1 (Node 22 ships npm 10).
+      # pnpm publish hands the upload to this npm.
+      - name: Update npm
+        run: npm install -g npm@^11.5.1
 
       # Cache pnpm store to speed up installs
       - name: Get pnpm store directory
@@ -50,25 +58,13 @@ jobs:
       - name: Build Project
         run: pnpm build
 
+      # changeset publish skips versions already on npm, tags the release
+      # (vX.Y.Z), and the action then creates the GitHub release from
+      # the changelog. Without NPM_TOKEN, the action uses trusted publishing.
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: pnpm publish --access public --no-git-checks
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            🚀 This is an automated release triggered by a merge to `master`.
-
-            - Packages were versioned and published to npm.
-            - Changelogs were updated automatically.
-            - For details, see the commit history and the `CHANGELOG.md` file.
+          publish: pnpm exec changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
