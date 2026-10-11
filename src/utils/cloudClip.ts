@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import clipboardy from 'clipboardy'
 import shell from 'shelljs'
+import { readImage, writeImage, writeText } from '../helpers/clipboard.ts'
 import {
 	getDefaultExpiration,
 	padSecret,
@@ -12,16 +12,77 @@ import {
 	setToken
 } from '../helpers/config.ts'
 import { decrypt, encrypt } from '../helpers/encrypt.ts'
+import {
+	detectImageMime,
+	extensionForMime,
+	fromDataUri,
+	SUPPORTED_IMAGE_FORMATS,
+	toDataUri
+} from '../helpers/image.ts'
 import { createGistApiConfig } from '../helpers/request.ts'
+import type {
+	ClipboardMetadata,
+	Gist,
+	GistApiConfig,
+	GistFile
+} from '../interfaces/interfaces.ts'
 import {
 	formatRemainingTime,
 	unwrapMetadata,
 	validateExpirationFormat,
 	wrapWithMetadata
 } from './expiration.ts'
-import { createGist, editGist, getGist } from './gistApi.ts'
+import { createGist, editGist, getGist, getGistFileContent } from './gistApi.ts'
 
 const error = 'Gist ID is not configured. Use `--init` first.'
+
+// File created by `init` so the gist is never empty (GitHub rejects empty
+// gists). It is not encrypted.
+const PLACEHOLDER_FILE = 'Cclip'
+const PLACEHOLDER = { content: 'Your clipboard in the cloud.' }
+
+type Entry =
+	| { status: 'ok'; metadata: ClipboardMetadata }
+	| { status: 'expired' }
+	| { status: 'unreadable' }
+
+/**
+ * Downloads, decrypts and unwraps a single gist file.
+ * Files that cannot be decrypted (the placeholder, or entries encrypted
+ * with a different secret key) are reported as unreadable instead of throwing.
+ */
+async function readEntry(
+	apiConfig: GistApiConfig,
+	file: GistFile,
+	secret: string
+): Promise<Entry> {
+	const content = await getGistFileContent(apiConfig, file)
+	let decrypted: string
+	try {
+		decrypted = decrypt(content, secret)
+	} catch {
+		return { status: 'unreadable' }
+	}
+	const metadata = unwrapMetadata(decrypted)
+	return metadata ? { status: 'ok', metadata } : { status: 'expired' }
+}
+
+/**
+ * Finds a file by exact name, or by name without extension
+ * (so `paste shot` finds the `shot.png` stored by `copy-image shot`).
+ */
+function findFile(gist: Gist, name: string): [string, GistFile] | undefined {
+	const exact = gist.files[name]
+	if (exact) return [name, exact]
+	const matches = Object.entries(gist.files).filter(
+		([fileName]) => path.parse(fileName).name === name
+	)
+	return matches.length === 1 ? matches[0] : undefined
+}
+
+function describeEntry(metadata: ClipboardMetadata) {
+	return metadata.type === 'image' ? ` <${metadata.mimeType ?? 'image'}>` : ''
+}
 
 export async function init(
 	configFile: string,
@@ -34,9 +95,7 @@ export async function init(
 	const apiConfig = createGistApiConfig(token)
 
 	if (!gistId) {
-		const placeholder = {
-			Cclip: { content: 'Your clipboard in the cloud.' }
-		}
+		const placeholder = { [PLACEHOLDER_FILE]: PLACEHOLDER }
 		const gist = await createGist(apiConfig, 'Cclip', placeholder)
 		gistId = gist.id
 		console.log(`New Gist created with ID: ${gistId}`)
@@ -79,22 +138,18 @@ export async function cleanupExpired(configFile: string) {
 		throw new Error('Token is not configured.')
 	}
 	const apiConfig = createGistApiConfig(token)
-	const gist = await getGist(apiConfig, config.gistId)
+	const gist: Gist = await getGist(apiConfig, config.gistId)
 
 	const filesToDelete: { [key: string]: any } = {}
 	let expiredCount = 0
 
-	Object.entries(gist.files).forEach(([name, details]) => {
-		const fileDetails = details as { content: string }
-		const decrypted = decrypt(fileDetails.content, config.secretKey || gist.id)
-		const metadata = unwrapMetadata(decrypted)
-
-		if (!metadata) {
-			// File has expired
+	for (const [name, file] of Object.entries(gist.files)) {
+		const entry = await readEntry(apiConfig, file, config.secretKey || gist.id)
+		if (entry.status === 'expired') {
 			filesToDelete[name] = null
 			expiredCount++
 		}
-	})
+	}
 
 	if (expiredCount > 0) {
 		await editGist(apiConfig, config.gistId, 'Cclip', filesToDelete)
@@ -104,7 +159,7 @@ export async function cleanupExpired(configFile: string) {
 	}
 }
 
-export async function list(configFile: string) {
+async function printEntries(configFile: string, withContent: boolean) {
 	const config = readConfig(configFile)
 	if (!config.gistId) {
 		throw new Error(error)
@@ -114,57 +169,43 @@ export async function list(configFile: string) {
 		throw new Error('Token is not configured.')
 	}
 	const apiConfig = createGistApiConfig(token)
-	const gist = await getGist(apiConfig, config.gistId)
+	const gist: Gist = await getGist(apiConfig, config.gistId)
 	console.log(`Gist ID: ${gist.id}`)
 	console.log(`Description: ${gist.description}`)
 	console.log('Files:')
-	Object.entries(gist.files).forEach(([name, details]) => {
-		const fileDetails = details as { size: number; content: string }
-		const decrypted = decrypt(fileDetails.content, config.secretKey || gist.id)
-		const metadata = unwrapMetadata(decrypted)
+	for (const [name, file] of Object.entries(gist.files)) {
+		const entry = await readEntry(apiConfig, file, config.secretKey || gist.id)
 
-		if (!metadata) {
+		if (entry.status === 'unreadable') {
+			if (name !== PLACEHOLDER_FILE) {
+				console.warn(`- ${name} (cannot decrypt: different secret key?)`)
+			}
+			continue
+		}
+		if (entry.status === 'expired') {
 			console.warn(`- ${name} (expired)`)
-			return
+			continue
 		}
 
+		const { metadata } = entry
 		const expirationInfo = metadata.expiresAt
 			? ` [expires in: ${formatRemainingTime(metadata.expiresAt)}]`
 			: ''
-		console.warn(`- ${name} (${fileDetails.size} bytes)${expirationInfo}`)
-	})
+		console.warn(
+			`- ${name} (${file.size} bytes)${describeEntry(metadata)}${expirationInfo}`
+		)
+		if (withContent && metadata.type !== 'image') {
+			console.log(metadata.content)
+		}
+	}
 }
 
-export async function listWithContent(configFile: string) {
-	const config = readConfig(configFile)
-	if (!config.gistId) {
-		throw new Error(error)
-	}
-	const token = config.token
-	if (!token) {
-		throw new Error('Token is not configured.')
-	}
-	const apiConfig = createGistApiConfig(token)
-	const gist = await getGist(apiConfig, config.gistId)
-	console.log(`Gist ID: ${gist.id}`)
-	console.log(`Description: ${gist.description}`)
-	console.log('Files:')
-	Object.entries(gist.files).forEach(([name, details]) => {
-		const fileDetails = details as { size: number; content: string }
-		const decrypted = decrypt(fileDetails.content, config.secretKey || gist.id)
-		const metadata = unwrapMetadata(decrypted)
+export function list(configFile: string) {
+	return printEntries(configFile, false)
+}
 
-		if (!metadata) {
-			console.warn(`- ${name} (expired)`)
-			return
-		}
-
-		const expirationInfo = metadata.expiresAt
-			? ` [expires in: ${formatRemainingTime(metadata.expiresAt)}]`
-			: ''
-		console.warn(`- ${name} (${fileDetails.size} bytes)${expirationInfo}`)
-		console.log(metadata.content)
-	})
+export function listWithContent(configFile: string) {
+	return printEntries(configFile, true)
 }
 
 export async function copy(
@@ -175,11 +216,14 @@ export async function copy(
 ) {
 	const config = readConfig(configFile)
 	if (!config.gistId) {
-		throw new Error('error')
+		throw new Error(error)
 	}
 	const token = config.token
 	if (!token) {
 		throw new Error('Token is not configured.')
+	}
+	if (!content) {
+		throw new Error('Nothing to copy: the clipboard (or stdin) is empty.')
 	}
 
 	// Use provided expiration or default from config
@@ -210,20 +254,33 @@ export async function copy(
 	}
 }
 
-const ALLOWED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
-const EXT_MIME: Record<string, string> = {
-	'.png': 'image/png',
-	'.jpg': 'image/jpeg',
-	'.jpeg': 'image/jpeg',
-	'.gif': 'image/gif',
-	'.webp': 'image/webp'
+// Images are stored as hex(AES(base64)), roughly 2.7x their size. The Gist
+// raw endpoint only serves files up to 10MB, so cap images at 3MB (~8MB stored).
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024 // 3MB
+
+function readImageFile(imagePath: string): Buffer {
+	if (!existsSync(imagePath)) {
+		throw new Error(`Image not found at path: ${imagePath}`)
+	}
+	const { size } = statSync(imagePath)
+	if (size > MAX_IMAGE_SIZE) {
+		throw imageTooLarge(size)
+	}
+	return readFileSync(imagePath)
 }
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+
+function imageTooLarge(size: number) {
+	return new Error(
+		`Image is too large (${(size / (1024 * 1024)).toFixed(1)}MB). Max allowed is ${
+			MAX_IMAGE_SIZE / (1024 * 1024)
+		}MB.`
+	)
+}
 
 export async function copyImage(
 	configFile: string,
 	name: string,
-	imagePath: string,
+	imagePath?: string,
 	expiration?: string
 ) {
 	const config = readConfig(configFile)
@@ -235,26 +292,27 @@ export async function copyImage(
 		throw new Error('Token is not configured.')
 	}
 
-	if (!imagePath || typeof imagePath !== 'string') {
-		throw new Error('Image path is required.')
-	}
-	if (!existsSync(imagePath)) {
-		throw new Error(`Image not found at path: ${imagePath}`)
+	// Without a path, take the image currently in the system clipboard
+	let data: Buffer
+	if (imagePath) {
+		data = readImageFile(imagePath)
+	} else {
+		const image = await readImage()
+		if (!image) {
+			throw new Error(
+				'No image found in the clipboard. Copy an image first or pass a file path.'
+			)
+		}
+		if (image.data.length > MAX_IMAGE_SIZE) {
+			throw imageTooLarge(image.data.length)
+		}
+		data = image.data
 	}
 
-	const ext = path.extname(imagePath).toLowerCase()
-	if (!ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
+	const mime = detectImageMime(data)
+	if (!mime) {
 		throw new Error(
-			`Unsupported image format: ${ext}. Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(', ')}`
-		)
-	}
-
-	const stats = statSync(imagePath)
-	if (stats.size > MAX_IMAGE_SIZE) {
-		throw new Error(
-			`Image is too large (${Math.ceil(stats.size / (1024 * 1024))}MB). Max allowed is ${Math.floor(
-				MAX_IMAGE_SIZE / (1024 * 1024)
-			)}MB.`
+			`Unsupported image format. Supported formats: ${SUPPORTED_IMAGE_FORMATS.join(', ')}`
 		)
 	}
 
@@ -267,19 +325,21 @@ export async function copyImage(
 	}
 
 	const apiConfig = createGistApiConfig(token)
-	const mime = EXT_MIME[ext]
-	const fileBuf = readFileSync(imagePath)
-	const base64 = fileBuf.toString('base64')
-	const dataUri = `data:${mime};base64,${base64}`
 
-	// If name has no extension, append the original
-	const finalName = path.extname(name) ? name : `${name}${ext}`
+	// If name has no extension, append the detected one
+	const finalName = path.extname(name)
+		? name
+		: `${name}${extensionForMime(mime)}`
 
-	const wrappedContent = wrapWithMetadata(dataUri, expirationTime, {
-		type: 'image',
-		mimeType: mime,
-		filename: path.basename(finalName)
-	})
+	const wrappedContent = wrapWithMetadata(
+		toDataUri(data, mime),
+		expirationTime,
+		{
+			type: 'image',
+			mimeType: mime,
+			filename: path.basename(finalName)
+		}
+	)
 	const encryptedContent = encrypt(
 		wrappedContent,
 		config.secretKey || config.gistId
@@ -289,14 +349,23 @@ export async function copyImage(
 
 	if (expirationTime) {
 		console.log(
-			`Image copied to cloud clipboard (expires in ${expirationTime}).`
+			`Image "${finalName}" copied to cloud clipboard (expires in ${expirationTime}).`
 		)
 	} else {
-		console.log('Image copied to cloud clipboard.')
+		console.log(`Image "${finalName}" copied to cloud clipboard.`)
 	}
 }
 
-export async function paste(configFile: string, name: string) {
+/**
+ * Resolves the --out target. A directory gets the entry's own file name.
+ */
+function resolveOutPath(out: string, fileName: string) {
+	return existsSync(out) && statSync(out).isDirectory()
+		? path.join(out, path.basename(fileName))
+		: out
+}
+
+export async function paste(configFile: string, name: string, out?: string) {
 	const config = readConfig(configFile)
 	if (!config.gistId) {
 		throw new Error(error)
@@ -306,22 +375,57 @@ export async function paste(configFile: string, name: string) {
 		throw new Error('Token is not configured.')
 	}
 	const apiConfig = createGistApiConfig(token)
-	const gist = await getGist(apiConfig, config.gistId)
-	const file = gist.files[name]
-	if (!file) {
+	const gist: Gist = await getGist(apiConfig, config.gistId)
+	const found = findFile(gist, name)
+	if (!found) {
 		throw new Error(`File "${name}" not found in the Gist.`)
 	}
-	const decryptedContent = decrypt(
-		file.content,
+	const [fileName, file] = found
+
+	const entry = await readEntry(
+		apiConfig,
+		file,
 		config.secretKey || config.gistId
 	)
+	if (entry.status === 'unreadable') {
+		throw new Error(
+			`Could not decrypt "${fileName}". Was it copied with a different secret key?`
+		)
+	}
+	if (entry.status === 'expired') {
+		throw new Error(`File "${fileName}" has expired.`)
+	}
+	const { metadata } = entry
 
-	const metadata = unwrapMetadata(decryptedContent)
-	if (!metadata) {
-		throw new Error(`File "${name}" has expired.`)
+	if (metadata.type === 'image') {
+		const image = fromDataUri(metadata.content)
+		if (!image) {
+			throw new Error(`Image "${fileName}" is corrupted.`)
+		}
+		if (out) {
+			const target = resolveOutPath(out, metadata.filename || fileName)
+			writeFileSync(target, image.data)
+			console.log(`Image saved to ${target}.`)
+			return
+		}
+		try {
+			await writeImage(image)
+		} catch (err) {
+			throw new Error(
+				`${(err as Error).message} Use --out <file> to save the image to disk instead.`
+			)
+		}
+		console.log('Image pasted to clipboard.')
+		return
 	}
 
-	clipboardy.writeSync(metadata.content)
+	if (out) {
+		const target = resolveOutPath(out, fileName)
+		writeFileSync(target, metadata.content)
+		console.log(`Content saved to ${target}.`)
+		return
+	}
+	await writeText(metadata.content)
 	console.log('Content pasted to clipboard.')
 }
 
@@ -343,6 +447,8 @@ export async function clear(configFile: string) {
 		},
 		{}
 	)
+	// Keep the placeholder: deleting every file fails with 422
+	files[PLACEHOLDER_FILE] = PLACEHOLDER
 	await editGist(apiConfig, config.gistId, 'Cclip', files)
 	console.log('Cloud clipboard cleared.')
 }

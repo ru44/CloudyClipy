@@ -14,6 +14,9 @@ export interface GistApiConfig {
 
 export interface GistFile {
 	content: string
+	size?: number
+	truncated?: boolean
+	raw_url?: string
 }
 
 export interface Gist {

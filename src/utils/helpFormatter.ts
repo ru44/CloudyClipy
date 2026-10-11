@@ -18,12 +18,14 @@ COMMANDS:
         Copy content to cloud clipboard
         Options: -e, --expires  Expiration time (e.g., 30m, 2h, 7d)
         
-    ci, copy-image <name> <path> [-e <time>]
-        Copy an image file to cloud clipboard
+    ci, copy-image <name> [path] [-e <time>]
+        Copy an image to cloud clipboard (from a file, or from your
+        clipboard when no path is given)
         Options: -e, --expires  Expiration time (e.g., 30m, 2h, 7d)
         
-    p, paste <name>
-        Paste content from cloud clipboard
+    p, paste <name> [-o <file>]
+        Paste content (text or image) from cloud clipboard
+        Options: -o, --out  Save to a file or directory instead
         
   List & View:
     l, list
@@ -56,7 +58,9 @@ EXAMPLES:
   cclip init ghp_your_github_token_here
   cclip copy mydata -e 2h
   cclip copy-image screenshot ./image.png -e 1d
+  cclip copy-image screenshot
   cclip paste mydata
+  cclip paste screenshot -o ./downloads
   cclip list
   cclip set-expiration 24h
   cclip cleanup-expired
